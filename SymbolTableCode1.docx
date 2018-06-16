@@ -1,0 +1,120 @@
+package test;
+
+import java.util.*;
+
+/**
+ * A symbol table is a data structure used  by a compiler/ interpreter,
+ * where each symbol in the program's source code is associated  with information
+ * relating to its declaration in the source.
+ * Here we make use of the data structures Hash Maps and Hash Tables that use hashing to store data.
+ * A hash determines where the object is stored in the table.
+ * We define findLocal() and FindGlobal() functions to find symbols in local and global
+ * scope respectively. Push() and Pop() functions help in inserting and deleting symbols into the symbol table.
+ * Display() displays all the contents of the symbol table. 
+ * 
+ *
+ * @author Chandana
+ */
+public class SymbolTable {
+
+    private Stack<HashMap<Integer, Node>> stack;
+    private Stack<HashMap<Integer, Node>> stackForAllSymbols;
+    private Stack<Integer> scopeStack;
+    private int scopeNumber; 
+    private int scopeCounter;
+    private int currentscopenumber;
+    private HashMap<Integer, Node> currentScope;
+    private int currentOffset;
+
+    public SymbolTable() { //initializing
+        currentOffset = 0;
+        scopeNumber = 0; //to display the scope of each symbol
+        scopeCounter = 0; //counter for keeping track of scope number
+        stack = new Stack<>(); // initializing new stack
+        stackForAllSymbols = new Stack<>();
+        scopeStack = new Stack<>(); 
+        push();
+    }
+
+    public Node findLocal(String name) {
+        if (stack.empty()) {
+            return null;
+        }
+        return stack.peek().get(name.hashCode());
+    }
+
+    public Node findGlobal(String name) {
+        for (int i = stack.size() - 1; i >= 0; i--) {
+            HashMap<Integer, Node> scope = stack.get(i);
+            Node result = scope.get(name.hashCode());
+            if (result != null) {
+                //System.out.println("Find " + name + " in scope " + (i + 1) );//Only for debug use
+                return result;
+            }
+        }
+        return null;
+    }
+
+    public void push() {
+        HashMap<Integer, Node> newScope = new HashMap<>();
+        stack.push(newScope);
+        stackForAllSymbols.push(newScope);
+        scopeCounter++;
+        scopeStack.push(scopeCounter);
+        scopeNumber = scopeCounter;
+    }
+
+    public HashMap<Integer, Node> pop() {
+        if (stack.empty()) {
+            return null;
+        }
+        scopeStack.pop();
+
+        if (scopeStack.empty()) {
+            scopeNumber = -1;
+        } else {
+            scopeNumber = scopeStack.peek();
+        }
+        return stack.pop();
+    }
+
+    public void insert(Node node) {
+        if (stack.empty()) {
+            return;
+        }
+        node.setOffset(currentOffset);
+        HashMap<Integer, Node> tos = stack.peek();
+        if (!tos.containsKey(node.getName().hashCode())) {
+            tos.put(node.getName().hashCode(), node);
+            currentOffset -= 4;
+        } else {
+            System.out.println(node.getName() + " already exists!");
+        }
+    }
+
+    public void display() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < stackForAllSymbols.size(); i++) {
+            sb.append("Scope ").append(i + 1).append(":\n");
+            for (Node node : stackForAllSymbols.get(i).values()) {
+                sb.append(node).append("\n");
+            }
+            sb.append("\n");
+        }
+
+        System.out.println(sb.toString());
+    }
+
+    public int getCurrentOffset() {
+        return currentOffset;
+    }
+
+    public void setCurrentOffset(int currentOffset) {
+        this.currentOffset = currentOffset;
+    }
+
+    public int getNextOffset() {
+        currentOffset -= 4;
+        return currentOffset;
+    }
+}

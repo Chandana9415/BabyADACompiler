@@ -1,0 +1,217 @@
+package Scanner;
+
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PushbackReader;
+
+/**
+ * 
+ * Lexical analyzer or scanner is the first phase of the compiler. 
+ * It breaks the sentence into a series of token (tokenizer) by eliminating whitespace
+ * and comments. Lexemes are a sequence of characters in a token.
+ * It also generates an error in case of encountering an 
+ * invalid token. 
+ * Here we use a PushbackReader(Reader in) which creates a new pushback reader
+ * with a one-character pushback buffer.
+ * getToken() is used to filter the tokens from input. idKeyword() is used to
+ * differentiate between the identifiers and keywords.
+ *
+ * -3 ID 
+ * -4 KEYWORD 
+ * -10 EOF
+ *  1 TRUE
+ *  2 FALSE
+ *  3 PROCEDURE
+ *  4 IS 
+ *  8 ADDITION OPERATORS (+,-,OR) 
+ *  9 MULTIPLICATION OPERATORS (*,/,DIV,REM,AND) 
+ * 10 NOT (!) 
+ * 11 IF 
+ * 12 LOOP 
+ * 13 WHILE 
+ * 14 END 
+ * 15 THEN 
+ * 16 BEGIN 
+ * 17 DECLARE 
+ * 18 CONSTANT 
+ * 23,24 (,)
+ * 25 (;) 
+ * 26 RELATIONAL OPERATORS (<,=,>) 
+ * 27 (:) 
+ * 28 (:=)
+ * 30 BASIC TYPE TOKEN ("INTEGER","FLOAT","BOOLEAN") 
+ * 32 "PUT","PUT_LINE","GET"
+ * 34 INTEGER LITERAL, REAL NUMBER LITERAL,STRING LITERAL
+ *
+ *
+ * @author Chandana
+ */
+public class LexicalAnalyser {
+
+    public BufferedReader br1;
+    PushbackReader buffer;
+    boolean hasUnderScore = false;
+    private char result;
+    public static String[] KeyToken = {"TRUE", "FALSE", "PROCEDURE", "IS",
+        "BOOLEAN", "INTEGER", "FLOAT", "OR", "AND", "NOT", "IF", "LOOP",
+        "WHILE", "END", "THEN", "BEGIN", "DECLARE", "CONSTANT",
+        "MOD", "PUT", "PUT_LINE", "GET"};
+    
+    public static int[] NumToken = {1, 2, 3, 4, 30, 30, 30,
+        8, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 9, 32, 32, 32};
+
+    public LexicalAnalyser() throws FileNotFoundException {
+        buffer = new PushbackReader(new FileReader("input5.txt"));
+    }
+
+    public LexicalAnalyser(String fileName) throws FileNotFoundException {
+        buffer = new PushbackReader(new FileReader(fileName));
+    }
+
+    public Token getToken() throws IOException {
+        String str = new String();
+        char c;
+        c = (char) buffer.read();
+        Token token = new Token();
+
+
+        while (Character.isWhitespace(c)) {
+            c = (char) buffer.read(); //ignore if whitespace found
+        }
+
+        if (Character.isLetter(c)) {
+            return idKeyword(c);
+        }
+
+        if (Character.isDigit(c)) {
+            boolean hasDot = false;
+            do { //checking for invalid conditions of consecutive dots
+                str += c;
+                c = (char) buffer.read();
+                if (hasDot && c == '.') {
+                    System.out.println(str + c + " contains 2 dot!");
+                    return getToken();
+                } else if (c == '.') {
+                    hasDot = true;
+                }
+            } while (Character.isDigit(c) || c == '.');
+            buffer.unread(c);
+            return new Token(34, str);
+        }
+
+
+        token.setLexeme(c);
+        switch (c) {
+            case '+':
+            case '-':
+                c = (char) buffer.read();
+                if (c == '-') {
+                    int value;
+                    do {//checking for consecutive -- (comment)
+                        value = buffer.read();
+                    } while (value != 10 && value != 13);//10 - ascii line feed. 13 - ascii carrage return.
+                    return getToken();
+                } else {
+                    token.setTokenNumber(8);
+                    buffer.unread(c);
+                }
+                break;
+
+            case '(':
+                token.setTokenNumber(23);
+                break;
+            case ')':
+                token.setTokenNumber(24);
+                break;
+
+            case '*':
+            case '/':
+                token.setTokenNumber(9);
+                break;
+
+            case ';':
+                token.setTokenNumber(25);
+                break;
+            case '=':
+            case '>':
+            case '<':
+                token.setTokenNumber(26);
+                break;
+            case ':':
+                c = (char) buffer.read();
+                if (c == '=') {
+                    token.setTokenNumber(28); //":="
+                    token.setLexeme(":=");
+                } else {
+                    token.setTokenNumber(27); //":"
+                    buffer.unread(c);
+                }
+                break;
+            case '\"': //string literal
+                String str1 = "\"";
+                do {
+                    c = (char) buffer.read();
+                    str1 += c;
+                } while (c != '\"');
+                token.setTokenNumber(34);
+                token.setLexeme(str1);
+                break;
+            case 65535://End of file 
+                return new Token(-10, "EOF$");
+            default:
+                System.out.println("illegal lexeme " + c);
+                return getToken();
+        }
+        return token;
+
+    }
+
+    public Token idKeyword(char c) throws IOException {
+        String str = "";
+        boolean previousIsUnderScore = false;
+        do { //checking for invalid combinations of an underscore,letters and digits
+            str += c;
+            c = (char) buffer.read();
+            if (previousIsUnderScore && !Character.isLetter(c)) {
+                System.out.println(str + c + " is illegal!");
+                return getToken(); 
+            } else if (c == '_') {
+                previousIsUnderScore = true;
+            } else if (Character.isLetter(c)) {
+                previousIsUnderScore = false;
+            }
+        } while (Character.isLetterOrDigit(c) || c == '_');
+        buffer.unread(c);// pushes into the front of the pushback buffer
+
+        str = str.toUpperCase(); //makes the string non case-sensitive
+
+        //If string is a keyword
+        for (int i = 0; i < KeyToken.length; i++) //keyword
+        {
+            if (str.equals(KeyToken[i])) {
+                return new Token(NumToken[i], KeyToken[i]);
+            }
+
+        }
+
+        //The string is just an id.
+        return new Token(-3, str);
+
+    }
+
+    public static void main(String[] args) throws IOException {
+        LexicalAnalyser lexer; //instance of sample
+        lexer = new LexicalAnalyser();
+        Token result;
+        do {
+            result = lexer.getToken();
+            System.out.println(result);
+
+        } while (result.getTokenNo() != -10); //end of file
+
+
+    }
+}

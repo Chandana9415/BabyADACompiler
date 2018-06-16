@@ -1,0 +1,217 @@
+Test Case 1:
+
+INPUT:
+---------
+procedure short is i: inTeger; begin
+put_line("Input your number");
+get(i);
+put_line(i);
+end short;
+
+OUTPUT:
+------------
+run:
+1
+4
+6
+7
+5
+2
+12
+18
+24
+25
+28
+31
+36
+33
+30
+27
+2
+11
+17
+38
+2
+12
+18
+24
+25
+28
+31
+35
+38
+33
+30
+27
+3
+Scope 1:
+I	0	I
+
+
+Scope 2:
+
+
+BUILD SUCCESSFUL (total time: 1 second)
+
+MIPS Code:
+--------------
+#Prolog:
+.text
+.globl  main
+main:
+move  $fp  $sp			#frame pointer will be start of active stack
+la  $a0  ProgStart
+li  $v0 4
+syscall
+#End of Prolog
+li $t0 "Input your number"
+sw $t0 -8($fp)
+la $a0 null
+li $v0 4
+syscall
+la $a0 LF
+li $v0 4
+syscall
+li $v0 5
+syscall
+sw $v0 0($fp)
+lw $a0 0($fp)
+li $v0 1
+syscall
+la $a0 LF
+li $v0 4
+syscall
+#Postlog:
+la  $a0  ProgEnd
+li  $v0  4
+syscall
+li  $v0  10
+syscall
+.data
+ProgStart:  .asciiz	"Program Start\n"
+ProgEnd:   .asciiz	"Program  End\n"
+LF: .asciiz "\n"
+TL: .asciiz "TRUE"
+FL: .asciiz "FALSE"
+
+MIPS OUTPUT:
+-------------------
+Program Start
+Input your number
+365
+365
+Program  End
+--------------------------------------------------------------------
+
+Test case 2:
+
+INPUT:
+---------
+procedure short is i: inTeger; begin
+put_line("Input your number");
+get(i);
+put_line(i+120);
+end short;
+
+OUTPUT:
+------------
+1
+4
+6
+7
+5
+2
+12
+18
+23
+2
+11
+17
+38
+2
+12
+18
+24
+25
+28
+31
+35
+38
+33
+30
+26
+28
+31
+36
+33
+30
+27
+3
+Scope 1:
+I	0	I
+
+
+Scope 2:
+
+
+------------------------------
+MIPS CODE:
+----------------
+#Prolog:
+.text
+.globl  main
+main:
+move  $fp  $sp	#frame pointer will be start of active stack
+la  $a0  ProgStart
+li  $v0 4
+syscall
+#End of Prolog
+la $a0 StrLabel1
+li $v0 4
+syscall
+la $a0 LF
+li $v0 4
+syscall
+li $v0 5
+syscall
+sw $v0 0($fp)
+li $t0 120
+sw $t0 -8($fp)
+lw $t0 0($fp)
+lw $t1 -8($fp)
+add $t0 $t0 $t1
+sw $t0 -12($fp)
+lw $a0 -12($fp)
+li $v0 1
+syscall
+la $a0 LF
+li $v0 4
+syscall
+#Postlog:
+la  $a0  ProgEnd
+li  $v0  4
+syscall
+li  $v0  10
+syscall
+.data
+ProgStart:  .asciiz	"Program Start\n"
+ProgEnd:   .asciiz	"Program  End\n"
+LF: .asciiz "\n"
+TL: .asciiz "TRUE"
+FL: .asciiz "FALSE"
+StrLabel1: .asciiz "Input your number"
+
+
+MIPS OUTPUT:
+--------------------
+Program Start
+Input your number
+2
+122
+Program  End
+
+
+
+
+
+

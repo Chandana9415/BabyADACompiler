@@ -1,0 +1,16 @@
+package codeGenerator;
+
+import java.io.IOException;
+
+
+/**
+ *
+ * @author Chandana
+ */
+public class Test {
+    public static void main(String[] args) throws IOException {
+        CodeGenerator codeGen = new CodeGenerator();
+        codeGen.programStart();
+        codeGen.print();
+    }
+}

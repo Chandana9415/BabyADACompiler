@@ -1,0 +1,49 @@
+package parser;
+
+/**
+ *
+ * @author Chandana
+ */
+public class Expression {
+    private int offset;
+    private char type;
+    private String labels;
+    
+    public Expression(){
+    
+    }
+    public Expression(int offset, char type){
+        this.offset = offset;
+        this.type = type;
+    }
+
+    public Expression(Expression otherExpression){
+        offset = otherExpression.offset;
+        type = otherExpression.type;
+    }
+    public int getOffset() {
+        return offset;
+    }
+
+    public void setOffset(int offset) {
+        this.offset = offset;
+    }
+
+    public char getType() {
+        return type;
+    }
+
+    public void setType(char type) {
+        this.type = type;
+    }
+
+    public String getLabels() {
+        return labels;
+    }
+
+    public void setLabels(String labels) {
+        this.labels = labels;
+    }
+    
+    
+}

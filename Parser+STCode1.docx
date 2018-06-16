@@ -1,0 +1,594 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package parser;
+import Scanner.LexicalAnalyser;
+import Scanner.Token;
+import codeGenerator.CodeGenerator;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import test.Node;
+import test.SymbolTable;
+
+/*
+ * Parser or syntactic analysis is the process of analysing a string of symbols
+ * which conform to rules of formal grammar. Parser takes input in the form of a
+ * sequence of tokens or program instructions and binds data structure in the form 
+ * of a parse tree or an abstract syntax tree.
+ * 
+ * 
+1:program :  PROCTOK IDTOK ISTOK decls BEGINTOK stats  ENDTOK IDTOK ';'
+2,3:stats :   statmt   stats |    <empty>
+4,5:decls:   decl  decls |    <empty>
+6:decl:   IDTOK ':' rest 
+7,8:rest:   BASTYPTOK  ';' |   CONSTTOK BASTYPTOK ASTOK LITTOK ';'
+9,10,11,12,13,14:statmt:  assignstat  |  ifstat   |  readstat   |  writestat |  blockst   |  loopst  
+15:assignstat:  idnonterm  ASTOK express ';'
+16: ifstat: IFTOK express THENTOK  stats ENDTOK IFTOK  ';'
+17:readstat:  READTOK '(' idnonterm ')' ';'
+18:writestat:  WRITETOK '('  writeexp ')' ';'
+19:loopst:  WHILETOK express LOOPTOK stats  ENDTOK LOOPTOK ';'
+20:blockst:  declpart   BEGINTOK   stats   ENDTOK  ';'
+21,22:declpart:  DECTOK  decl  decls |    <empty>
+23,24:writeexp:  STRLITTOK  |  express
+25:express:  term expprime       
+26,27:expprime:  ADDOPTOK  term expprime |  <empty>  
+28:term:  relfactor termprime
+29,30:termprime:  MULOPTOK  relfactor termprime  |  <empty> 
+31:relfactor:  factor factorprime
+32,33:factorprime:  RELOPTOK  factor  |  <empty>
+34,35,36,37:factor:  NOTTOK   factor |  idnonterm |  LITTOK |  '('  express  ')' 
+38:idnonterm:  IDTOK
+
+
+ * @author Chandana
+ */
+
+
+public class Parser {
+    private Token token;
+    private LexicalAnalyser lexer;
+    private SymbolTable symbolTable;
+    private CodeGenerator codeGen;
+    private Expression expression;
+
+
+    
+    
+    public Parser(LexicalAnalyser s) throws IOException
+    {
+        this.lexer=s;
+        this.token=lexer.getToken();
+        symbolTable = new SymbolTable();
+        codeGen = new CodeGenerator();  
+        expression = new Expression();
+    }
+
+    
+    public static void main(String[] args) throws FileNotFoundException, IOException {
+        LexicalAnalyser lexer = new LexicalAnalyser("shortcodeGen.txt"); 
+        Parser parser = new Parser(lexer);
+        parser.program();
+        
+        parser.symbolTable.display();
+        
+    }
+    
+    public  void match(int expectedToken) throws IOException
+    {
+        int tn=token.getTokenNo();
+        if(tn==expectedToken) {
+            token=lexer.getToken();
+        } else {
+            symbolTable.display();
+            fatalError();
+            
+        }
+    }
+    
+    private void fatalError(){
+        System.out.println(token + "\tdoes not match with the grammar!");
+        System.exit(-1);
+    }
+    
+    
+    
+    public  void program() throws IOException
+    { //1:program :  PROCTOK IDTOK ISTOK decls BEGINTOK stats  ENDTOK IDTOK ';'
+        System.out.println("1");
+        codeGen.programStart(); //prolog
+        match(3);//proctok
+        match(-3); //idtok
+        match(4);//istok
+        decls();
+        match(16); //begintok
+        symbolTable.push();
+        //a method to record current available offset.
+        int currentOffset = symbolTable.getCurrentOffset();
+        stats();
+        match(14);//endtok
+        symbolTable.pop(); //print before pop
+        symbolTable.setCurrentOffset(currentOffset);
+        match(-3); //idtok
+        match(25); //;
+        codeGen.programEnd(); //postlog
+                
+    }
+    
+    public  void stats() throws IOException
+    {//2,3:stats :   statmt   stats |    <empty>
+        if(token.getTokenNo()==-3||token.getTokenNo()==11||token.getTokenNo()==32||token.getTokenNo()==17||token.getTokenNo()==13)
+        {//idtok||if||write||declare||while
+            
+            System.out.println("2");
+            statmt();
+            stats();
+        }
+          else
+        {//<empty>
+            System.out.println("3");
+        }
+        
+    }
+    
+    public  void decls() throws IOException
+    {//4,5:decls:   decl  decls |    <empty>
+        if (token.getTokenNo() == -3) //idtok
+        {
+            System.out.println("4");
+            decl();           
+            decls();
+        }
+        
+        else 
+        { //<empty>
+            System.out.println("5");
+        }  
+    }
+    
+    public  void decl() throws IOException
+    {//6:decl:   IDTOK ':' rest
+        System.out.println("6");       
+        String name = token.lexeme();        
+        match(-3); //idtok      
+        match(27); //:
+        rest(name);
+    }
+    
+   public  void rest(String name) throws IOException
+   {//8:rest:BASTYPTOK ';'|CONSTTOK BASTYPTOK ASTOK LITTOK ';'
+       if(token.getTokenNo()==30)
+       {
+       System.out.println("7");
+       String type = token.lexeme();       
+       Node newID = new Node(name, type);
+       symbolTable.insert(newID);
+       match(30); //bastyptok
+       match(25); //; 
+       }
+       else
+       {
+           System.out.println("8");
+           match(18); //const
+           match(30); //bastyptok
+           match(28); //astok
+           match(34); //number literal
+           match(25); //;
+       }
+       
+   }
+   
+   public  void statmt() throws IOException
+   {/* 9,10,11,12,13,14:statmt:  assignstat  |  ifstat   | 
+       readstat   |  writestat |  blockst   |  loopst */
+      switch(token.getTokenNo())
+      { 
+         
+          case -3: //id
+              System.out.println("9");
+              assignstat();
+              break;
+          case 11: //if
+              System.out.println("10");
+              ifstat();
+              break;
+          case 32: //get
+              if (token.lexeme().equals("GET"))
+              {
+              System.out.println("11");
+              readstat();
+              } 
+              else 
+              {
+              System.out.println("12");
+              writestat();
+              }
+              break;
+          case 16: //begin        	 
+              System.out.println("13");
+              blockst();
+              break;
+          case 17: //declare       	 
+              System.out.println("13");
+              blockst();
+              break;
+          case 13:
+              System.out.println("14");
+              loopst();
+              break;
+          
+          default:
+              break;
+       }
+    
+   }
+   
+   public  void assignstat() throws IOException
+   {//15:assignstat:  idnonterm  ASTOK express ';'
+       System.out.println("15");
+       idnonterm();
+       match(28); //astok
+       Expression lhsExpression = new Expression(expression); 
+       express();
+       match(25); //;
+       
+       if (lhsExpression.getType() == expression.getType()){
+            //Only works for integer and boolean.
+           codeGen.codeGen("lw $t0 " + expression.getOffset() + "($fp)");
+           codeGen.codeGen("sw $t0 " + lhsExpression.getOffset() + "($fp)");
+           //TODO - Implements read floating numbers in another way.
+       }
+       else
+       {
+           System.out.println("Type mismatch!");
+       }
+   }
+   
+   
+   public  void ifstat() throws IOException
+   {//16: ifstat: IFTOK express THENTOK  stats ENDTOK IFTOK  ';'
+       System.out.println("16");
+       String endIfLabel = codeGen.getEndIfLabel();
+       match(11); //iftok      
+       express();       
+       codeGen.codeGen("lw $t0"+expression.getOffset()+"($fp)");
+       codeGen.codeGen("beq $to $zero " + endIfLabel);       
+       match(15); //then
+       stats();  
+       match(14); //end
+       match(11); //iftok
+       match(25); //;
+       codeGen.writeLabel(endIfLabel);       
+       
+   }
+   
+   public  void readstat() throws IOException
+   {//17:readstat:  READTOK '(' idnonterm ')' ';'
+       System.out.println("17");
+       match(32); //readtok
+       match(23); // open parenthesis
+       idnonterm();
+       match(24); //close paranthesis
+       match(25); //; 
+       if(expression.getType()== 'I')
+       {
+           codeGen.codeGen("li $v0 5"); //v=return value from function call, li=load immediately
+           codeGen.codeGen("syscall"); //call to the operating system
+           codeGen.codeGen("sw $v0 "+expression.getOffset()+"($fp)"); //fp=stack frame pointer
+           //sw=store word in specified address
+       }
+       else 
+       {
+    	   //TODO - Implements more types here
+           //fatalError();
+       }
+       
+       
+   }
+   
+   public  void writestat() throws IOException
+   {//18:writestat:  WRITETOK '('  writeexp ')' ';'
+       System.out.println("18");
+       boolean hasLineFeed = false;
+       if(token.lexeme().equals("PUT_LINE"))
+       {
+           hasLineFeed = true;
+       }
+
+       match(32); //writetok=put,put_line
+       match(23); //open parenthesis
+       
+       writeexp();
+       switch(expression.getType())
+       {
+           case 'B'://boolean
+        	   //TODO 
+               break;
+           case 'I': //integer
+               codeGen.codeGen("lw $a0 "+expression.getOffset()+"($fp)"); //a=register used for first parameter
+               codeGen.codeGen("li $v0 1");
+               codeGen.codeGen("syscall");
+               break;
+           case 'S'://string
+        	   String label = codeGen.recordStringLabel(expression.getLabels());
+               codeGen.codeGen("la $a0 " + label);
+               codeGen.codeGen("li $v0 4");
+               codeGen.codeGen("syscall");
+               break;
+           default:
+               fatalError();           
+       }
+       match(24); //close parenthesis
+       match(25); //;
+      
+       if(hasLineFeed)
+       {
+           codeGen.codeGen("la $a0 LF");
+           codeGen.codeGen("li $v0 4");
+           codeGen.codeGen("syscall");
+       }
+       
+   }
+   
+   public  void loopst() throws IOException
+   {//19:loopst:  WHILETOK express LOOPTOK stats  ENDTOK LOOPTOK ';'
+       System.out.println("19");
+       String startLabel = codeGen.genStartWhileLabel();
+       String endLabel = codeGen.getEndWhileLabel();
+       match(13);//whiletok
+       express();
+       codeGen.codeGen("lw $t0"+expression.getOffset()+"($fp)");
+       codeGen.codeGen("beq $t0 $zero " + endLabel);
+       match(12);//looptok
+       stats();
+       codeGen.codeGen("goto " + startLabel);
+       match(14);//endtok
+       match(12);//looptok
+       match(25); //;     
+       codeGen.writeLabel(endLabel);
+       
+   }
+   
+    public  void blockst() throws IOException
+    {//20:blockst:  declpart   BEGINTOK   stats   ENDTOK  ';'
+    System.out.println("20");
+    declpart();
+    match(16);//begintok
+    //push stack in st
+    symbolTable.push();
+    stats();
+    match(14);//endtok
+    //pop the stack in st
+    symbolTable.pop();
+    match(25);//;
+    
+    }
+    
+    public  void declpart() throws IOException
+    {//21,22:declpart:  DECTOK  decl  decls |<empty>
+    if(token.getTokenNo()==17)
+    {
+    System.out.println("21");
+    match(17); //dectok
+    decl();
+    decls();
+    }
+    else 
+    { //<empty>
+        System.out.println("22");
+    }
+   
+    }
+    public  void writeexp() throws IOException
+    {//23,24:writeexp:  STRLITTOK  |  express
+    
+    if(token.getTokenNo()==34)
+    {
+        System.out.println("23");
+        expression.setLabels(token.lexeme());
+        expression.setType('S');
+        match(34); //strlittok
+    }
+    else
+    {
+        System.out.println("24");
+        express();
+    }
+    
+    }
+    public  void express() throws IOException
+    {//25:express:  term expprime
+        System.out.println("25");
+        term();
+        expprime();
+    }
+   public  void expprime() throws IOException
+   {//26,27:expprime:  ADDOPTOK  term expprime |  <empty>
+       if(token.getTokenNo()==8)
+       {
+       System.out.println("26");
+       Expression lhsExpression = new Expression(expression);
+       String operator=token.lexeme();
+       match(8);  //addoptok     
+       term();
+       expprime();
+       if(operator.equals("+"))
+       {
+    	   int offset = symbolTable.getNextOffset();
+           codeGen.codeGen("lw $t0 "+lhsExpression.getOffset()+"($fp)");
+           codeGen.codeGen("lw $t1 "+expression.getOffset()+"($fp)");
+           codeGen.codeGen("add $t0 $t0 $t1");
+           codeGen.codeGen("sw $t0 "+offset+"($fp)");
+           expression.setOffset(offset);
+       } else if (operator.equals("-")) 
+       {
+    	   int offset = symbolTable.getNextOffset();
+           codeGen.codeGen("lw $t0 "+lhsExpression.getOffset()+"($fp)");
+           codeGen.codeGen("lw $t1 "+expression.getOffset()+"($fp)");
+           codeGen.codeGen("sub $t0 $t0 $t1");
+           codeGen.codeGen("sw $t0 "+offset+"($fp)");
+           expression.setOffset(offset);
+       }
+       
+       }
+       else
+       { 
+       System.out.println("27");
+       }
+   }
+   
+   public  void term() throws IOException
+   {//28:term:  relfactor termprime
+       System.out.println("28");
+       relfactor();
+       termprime();
+       
+   }
+   
+   public  void termprime() throws IOException
+   {//29,30:termprime:  MULOPTOK  relfactor termprime  |  <empty>
+       
+       if(token.getTokenNo()==9)
+       {
+           System.out.println("29");
+           String operator=token.lexeme();
+           String operatorName=new String();
+           match(9); //muloptok
+           relfactor();
+           termprime();
+           Expression lhsExpression = new Expression(expression);
+            
+       if (lhsExpression.getType() == expression.getType()){
+          if(operator.equalsIgnoreCase("AND"))
+          {
+              codeGen.codeGen("lw $t0"+lhsExpression.getOffset()+"($fp)");
+              codeGen.codeGen("and $t0 $t0 $t1");
+              codeGen.codeGen("sw $t0"+symbolTable.getNextOffset()+"($fp)");
+              //TODO updating the offset generated by st
+              this.expression.setOffset(expression.getOffset());
+              return;
+          }
+          if(operator.equalsIgnoreCase("*"))
+          {
+        	//TODO updating the offset generated by st
+              operatorName="mult";
+          }
+          if(operator.equals("/"))
+          {
+        	//TODO updating the offset generated by st
+              operatorName="div";
+          }
+          
+          codeGen.codeGen("lw $t0"+lhsExpression.getOffset()+"($fp)");
+          codeGen.codeGen("lw $t1"+expression.getOffset()+"($fp)");
+          codeGen.codeGen(operatorName+"$t0 $t1");
+          expression.setOffset(symbolTable.getNextOffset());
+           
+       }
+       }
+       else
+       { //<empty>
+           System.out.println("30");
+       }
+               
+   }
+   
+   public  void relfactor() throws IOException
+   {//31:relfactor:  factor factorprime
+       System.out.println("31");
+       factor();
+       factorprime();
+       
+   }
+   
+   public void factorprime() throws IOException
+   {//32,33:factorprime:  RELOPTOK  factor  |  <empty>
+       if(token.getTokenNo()==26)
+       {
+           System.out.println("32");                   
+           match(26);//reloptoken
+           factor();
+           
+       }
+       else
+       {
+           System.out.println("33");
+       }
+   }
+   public void factor() throws IOException 
+   {/*34,35,36,37:factor:  NOTTOK   factor |
+       idnonterm |  LITTOK |  '('  express  ')' */
+       switch(token.getTokenNo())
+       {
+           case 10:
+               System.out.println("34");
+               match(10); //not token
+               factor();
+               break;
+           case -3:
+               System.out.println("35");
+               idnonterm();
+               break;
+           case 34:
+               System.out.println("36");
+               String value = token.lexeme();
+               char type = getType(value);
+               if (type == 'I' || type == 'B') {
+	               codeGen.codeGen("li $t0 " + value);
+	               int offset = symbolTable.getNextOffset();
+	               codeGen.codeGen("sw $t0 " + offset +"($fp)");
+	               expression.setOffset(offset);
+	               expression.setType(type);
+               }
+               match(34); //littok
+               break;
+           case 23:
+               System.out.println("37");
+               match(23); // (
+               express();
+               match(24);// )
+               break;
+           default:
+               System.out.println("Error!");
+               break;
+       }
+   }
+   
+   private char getType(String lexeme){
+       char t = lexeme.charAt(0);
+      if (t == 'T' || t == 'F')
+      {
+          return 'B'; //boolean type
+      } 
+      else if (Character.isDigit(t))
+      {
+          return 'I'; //integer type
+      }
+      else if (t == '\"')
+      {
+          return 'S'; //string type
+      }
+         
+      else
+      {
+           return 'E';
+      } // error 
+   }
+   public void idnonterm() throws IOException
+   {//38:idnonterm:  IDTOK
+       System.out.println("38");
+       Node node;
+       if ((node = symbolTable.findGlobal(token.lexeme())) == null){
+           System.out.println(token.lexeme() + " not declared!");
+           codeGen.error();
+       } else {
+           //TODO - Reserve for the code generation part
+           expression.setOffset(node.getOffset());
+           expression.setType(node.getType());
+       }
+       match(-3); //idtok
+   }
+}
+
+    

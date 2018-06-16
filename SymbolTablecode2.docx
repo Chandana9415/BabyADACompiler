@@ -1,0 +1,50 @@
+package test;
+
+/**
+ *
+ * @author Chandana
+ */
+public class Node {
+    private String name;
+    private int offset;
+    private char type;
+    
+    public Node(String name){
+        this.name = name;
+    }
+
+    public Node(String name, String type){
+        this.type = type.charAt(0);
+        this.name = name;
+    }
+    @Override
+    public String toString() {
+        return name + "\t" + offset + "\t" + type + "\n";
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getOffset() {
+        return offset;
+    }
+
+    public void setOffset(int offset) {
+        this.offset = offset;
+    }
+
+    public char getType() {
+        return type;
+    }
+
+    public void setType(char type) {
+        this.type = type;
+    }
+    
+    
+}

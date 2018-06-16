@@ -1,0 +1,58 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package Scanner;
+
+/**
+ *
+ * @author Chandana
+ */
+public class Token {
+
+    private int tn;
+    private String lex;
+
+    public Token(int tn, String lex) {
+        this.tn = tn;
+        this.lex = lex;
+    }
+    public Token()
+    {
+        this(-1,"");
+    }
+           
+
+    public int tokenNumber() {
+        return this.tn;
+    }
+
+    public String lexeme() {
+        return this.lex;
+    }
+    
+    public void setTokenNumber(int tn){
+        this.tn=tn;
+    }
+    public int getTokenNo()
+    {
+        return this.tn;
+    }
+    
+    public void setLexeme(String lex)
+    {
+        this.lex=lex;
+    }
+    public void setLexeme(char character)
+    {
+        this.lex=String.valueOf(character);
+    }
+
+    @Override
+    public String toString() {
+        //return "Token{" + "tn=" + tn + ", l=" + l + '}';
+        String result=this.tokenNumber()+" "+this.lexeme();
+        return result;   
+       
+    }
+}

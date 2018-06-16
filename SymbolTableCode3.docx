@@ -1,0 +1,57 @@
+package test;
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+
+/**
+ *
+ * @author Chandana
+ */
+public class Test {
+
+    public static void main(String[] args) throws FileNotFoundException, IOException {
+        SymbolTable st = new SymbolTable();
+
+        FileReader fileReader;
+        fileReader = new FileReader("C:\\Users\\Chandana\\Desktop\\Test\\input4.txt");
+        BufferedReader buffer = new BufferedReader(fileReader);
+        String str;
+        while ((str = buffer.readLine()) != null) {
+            String splitString[] = str.split("\\s+");
+            for (String strVal : splitString) {
+
+                System.out.println("Read literal: " + strVal);
+                switch (strVal) {
+
+                    case "{":
+                    case "OPEN":
+                    case "#":
+                        st.push();
+                        System.out.println("push stack!");
+                        break;
+                    case "}":
+                    case "CLOSE":
+                    case "$":
+                        st.pop();
+                        System.out.println("pop stack!");
+                        break;
+                    default: {
+                        if (st.findLocal(strVal) == null) {
+                            st.insert(new Node(strVal));
+                            System.out.println("Insert " + strVal + " into ST.");
+                        } else {
+                            System.out.println(strVal + "already exists!");
+                        }
+
+                    }
+                }
+            }
+
+        }
+        System.out.println("The entire symbole table is:");
+        st.display();
+        st.findGlobal("a");
+    }
+}

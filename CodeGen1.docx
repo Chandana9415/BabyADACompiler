@@ -1,0 +1,126 @@
+package codeGenerator;
+/*
+ * Code generator is the process in which a compiler's code generator converts
+ * some intermediate representation of source code into a form that can be 
+ * readily executable by a machine.
+ * StringBuilder objects used here are like String objects, except that they can be modified.
+ * Internally, these objects are treated like variable-length arrays that contain a sequence of characters. 
+ * At any point, the length and content of the sequence can be changed through method invocations.
+ * 
+ */
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+
+public class CodeGenerator {
+    private static final String STRING_LABEL = "StrLabel";
+    private static final String IF_LABEL="EndIfLabel";
+    private static final String START_WHILE_LABEL="StartWhileLabel";
+    private static final String END_WHILE_LABEL="EndWhileLabel";  
+    private StringBuilder codes;
+    private StringBuilder strLabelCodes;
+    private boolean hasError;
+    private int strLabelCounter;
+    private int ifLabelCounter;
+    private int whileLabelCounter;
+    //Writer here
+    private FileWriter writer;
+    
+    public CodeGenerator() throws IOException{
+        codes = new StringBuilder();
+        strLabelCodes = new StringBuilder();
+        hasError = false;
+        strLabelCounter = 1;
+        writer = new FileWriter(new File("output.s"));
+    }
+    public void programStart(){
+        codes.append("#Prolog:").append("\n")
+                .append(".text").append("\n")
+                .append(".globl  main").append("\n")
+                .append("main:").append("\n")
+                .append("move  $fp  $sp			#frame pointer will be start of active stack").append("\n")
+                .append("la  $a0  ProgStart").append("\n")
+                .append("li  $v0 4").append("\n")
+                .append("syscall").append("\n")
+                .append("#End of Prolog").append("\n");
+    }
+    
+    public void programEnd() throws IOException{
+        //append();
+        codes.append("#Postlog:").append("\n")
+                .append("la  $a0  ProgEnd").append("\n")
+                .append("li  $v0  4").append("\n")
+                .append("syscall").append("\n")
+                .append("li  $v0  10").append("\n")
+                .append("syscall").append("\n")
+                .append(".data").append("\n");
+
+        //For label generation
+        codes.append("ProgStart:  .asciiz	\"Program Start\\n\"\n");
+        codes.append("ProgEnd:   .asciiz	\"Program  End\\n\"\n");
+        generateAsciiLabel("LF","\\n");
+        generateAsciiLabel("TL", "TRUE");
+        generateAsciiLabel("FL", "FALSE");
+        codes.append(strLabelCodes);
+//        genStringLabel("literals");
+//        genIfLabel("if");
+//        genWhileLabel("while");
+        
+        if (!hasError){
+            writer.write(codes.toString()); //write to which file? 
+        }
+        writer.close();
+    }
+    
+    public String recordStringLabel(String literals){
+    	String label = STRING_LABEL + strLabelCounter;
+    	strLabelCounter++;
+        strLabelCodes.append(label).append(": .asciiz ")
+        	.append(literals).append("\n");
+        return label;
+    }
+    
+    public String getEndIfLabel()
+    {
+    	String endIfLabel = IF_LABEL + ifLabelCounter;
+    	ifLabelCounter++;
+        return endIfLabel;
+    }
+    
+    public String genStartWhileLabel()
+    {
+    	String startWhileLabel = START_WHILE_LABEL + whileLabelCounter;
+    	whileLabelCounter++;
+        codes.append(startWhileLabel).append(": ").append("\n");
+        return startWhileLabel;
+    }
+    
+    public String getEndWhileLabel() 
+    {
+    	String endWhileLabel =  END_WHILE_LABEL + whileLabelCounter;
+    	 return endWhileLabel;
+    }
+    
+    public void writeLabel(String label) {
+        codes.append(label).append(": ").append("\n");
+       
+    }
+    public void codeGen(String instruction){
+        codes.append(instruction).append("\n");
+    }
+    
+              
+    public void print(){
+        System.out.println(codes.toString());
+    }
+    
+    public void error(){
+        hasError = true;
+    } 
+    
+    private void generateAsciiLabel(String label, String content){
+        codes.append(label).append(": .asciiz ").append("\"").append(content).append("\"\n");
+    }
+}
